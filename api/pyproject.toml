@@ -1,0 +1,16 @@
+[project]
+name = "minecraft-vm-starter"
+version = "1.0.0"
+description = "Serverless app to start a Minecraft VM on GCP"
+requires-python = ">=3.11"
+
+dependencies = [
+  "fastapi>=0.124.4",
+  "uvicorn>=0.38.0",
+  "mcrcon>=0.7.0",
+  "docker>=7.1.0",
+  "python-dotenv>=1.2.1"
+]
+
+[tool.setuptools]
+packages = ["app"]

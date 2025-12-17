@@ -1,0 +1,28 @@
+services:
+  minecraft:
+    build:
+      context: ./server
+    container_name: minecraft-server
+    environment:
+      EULA: "TRUE"
+      ENABLE_RCON: "true"
+      RCON_PASSWORD: "changeme"
+      RCON_PORT: 25575
+    ports:
+      - "25565:25565"
+      - "25575:25575"
+    volumes:
+      - ./server/vm/inactivity-check.py:/opt/minecraft/inactivity-check.py
+
+  api:
+    build:
+      context: ./api
+    environment:
+      MINECRAFT_CONTAINER: minecraft-server
+      MOCK: "false"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - minecraft
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

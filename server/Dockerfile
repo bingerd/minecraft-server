@@ -1,5 +1,8 @@
 FROM itzg/minecraft-server:latest
 
+ENV EULA=TRUE
+ENV MEMORY=1G
+
 USER root
 
 # Install Python and venv
@@ -10,7 +13,7 @@ RUN apt-get update && \
 # Create Python virtual environment
 RUN python3 -m venv /opt/venv
 RUN /opt/venv/bin/pip install --upgrade pip
-RUN /opt/venv/bin/pip install mcrcon
+RUN /opt/venv/bin/pip install mcrcon dotenv
 
 WORKDIR /opt/minecraft
 
@@ -22,5 +25,5 @@ RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-check.py
 # Expose Minecraft & RCON
 EXPOSE 25565 25575
 
-# Override base image entrypoint
-ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]
+# # Override base image entrypoint
+# ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]

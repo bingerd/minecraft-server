@@ -13,4 +13,6 @@ done
 echo "Minecraft server is ready. Starting inactivity script..."
 
 # Run Python inactivity script in a loop
-exec /opt/venv/bin/python -u /opt/minecraft/inactivity-check.py
+/opt/venv/bin/python -u /opt/minecraft/inactivity-check.py
+
+/start

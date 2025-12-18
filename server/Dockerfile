@@ -26,4 +26,4 @@ RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-check.py
 EXPOSE 25565 25575
 
 # # Override base image entrypoint
-# ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]
+ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]

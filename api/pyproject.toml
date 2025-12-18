@@ -7,8 +7,9 @@ requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.124.4",
   "uvicorn>=0.38.0",
+  "google-api-python-client>=2.95.0",
+  "google-auth>=2.22.0",
   "mcrcon>=0.7.0",
-  "docker>=7.1.0",
   "python-dotenv>=1.2.1"
 ]
 

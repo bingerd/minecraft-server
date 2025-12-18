@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, subprocess
 import time
 from mcrcon import MCRcon
 import dotenv
@@ -8,8 +8,8 @@ dotenv.load_dotenv()
 RCON_HOST = os.getenv("RCON_HOST", "localhost")
 RCON_PORT = int(os.getenv("RCON_PORT", 25575))
 RCON_PASSWORD = os.getenv("RCON_PASSWORD", "changeme")
-IDLE_LIMIT = int(os.getenv("IDLE_LIMIT", 3600))  # seconds
-SCHEDULE_INTERVAL = int(os.getenv("SCHEDULE_INTERVAL", 60))   # seconds
+IDLE_LIMIT = int(os.getenv("IDLE_LIMIT", 120))  # seconds
+SCHEDULE_INTERVAL = int(os.getenv("SCHEDULE_INTERVAL", 10))   # seconds
 STATE_FILE = "/tmp/last_active"
 
 # If state file doesn't exist, treat container start as last activity
@@ -34,13 +34,21 @@ while True:
     with open(STATE_FILE) as f:
         last = int(f.read())
 
-    # Check idle
     if now - last > IDLE_LIMIT:
         try:
             with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT) as mcr:
                 print("Server idle. Sending stop command...", flush=True)
                 mcr.command("stop")
-            print("Server stopped due to inactivity. Exiting container...", flush=True)
+            
+            # Self-delete VM
+            print("Server idle. Deleting VM...", flush=True)
+            zone = os.getenv("ZONE", "europe-west1-b")
+            vm_name = os.getenv("VM_NAME", "minecraft-server")
+            subprocess.run([
+                "gcloud", "compute", "instances", "delete", vm_name,
+                "--zone", zone,
+                "--quiet"
+            ])
             sys.exit(0)
         except Exception as e:
             print(f"Error sending stop command: {e}", flush=True)

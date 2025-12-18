@@ -4,42 +4,24 @@ provider "google" {
   zone    = var.zone
 }
 
-# Optional persistent disk
-resource "google_compute_disk" "minecraft_disk" {
-  name  = "${var.vm_name}-disk"
-  type  = "pd-standard"
-  zone  = var.zone
-  size  = 10 # GB
+###########################
+# Artifact Registries
+###########################
+resource "google_artifact_registry_repository" "minecraft_server" {
+  location      = var.region
+  repository_id = "minecraft-server"
+  format        = "DOCKER"
 }
 
-# Compute Engine VM
-resource "google_compute_instance" "minecraft" {
-  name         = var.vm_name
-  machine_type = "e2-micro" # free-tier eligible
-  zone         = var.zone
-
-  boot_disk {
-    initialize_params {
-      image = "debian-cloud/debian-12"
-      size  = 10
-    }
-  }
-
-  attached_disk {
-    source = google_compute_disk.minecraft_disk.id
-  }
-
-  network_interface {
-    network = "default"
-    access_config {} # External IP
-  }
-
-  tags = ["minecraft-server"]
-
-  # No startup-script to keep VM clean for testing
+resource "google_artifact_registry_repository" "minecraft_api" {
+  location      = var.region
+  repository_id = "minecraft-api"
+  format        = "DOCKER"
 }
 
-# Firewall to allow Minecraft connections
+###########################
+# Firewall for Minecraft
+###########################
 resource "google_compute_firewall" "minecraft" {
   name    = "allow-minecraft"
   network = "default"
@@ -51,4 +33,136 @@ resource "google_compute_firewall" "minecraft" {
 
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["minecraft-server"]
+}
+
+###########################
+# Service Account
+###########################
+resource "google_service_account" "minecraft_vm" {
+  account_id   = "minecraft-vm-sa"
+  display_name = "Minecraft VM Service Account"
+}
+
+# Artifact Registry pull access
+resource "google_artifact_registry_repository_iam_member" "minecraft_server_pull" {
+  repository = google_artifact_registry_repository.minecraft_server.name
+  location   = var.region
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.minecraft_vm.email}"
+}
+
+# Allow VM to delete itself
+resource "google_project_iam_member" "vm_self_delete" {
+  project = var.project_id
+  role   = "roles/compute.instanceAdmin.v1"
+  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
+}
+
+# Allow VM to write logs
+resource "google_project_iam_member" "vm_logging" {
+  project = var.project_id
+  role   = "roles/logging.logWriter"
+  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
+}
+
+###########################
+# Minecraft Container VM
+###########################
+resource "google_compute_instance" "minecraft" {
+  name         = var.vm_name
+  machine_type = "e2-medium"
+  zone         = var.zone
+  tags         = ["minecraft-server"]
+
+  service_account {
+    email  = google_service_account.minecraft_vm.email
+    scopes = ["cloud-platform"]
+  }
+
+  scheduling {
+    preemptible       = true
+    automatic_restart = false
+  }
+
+  boot_disk {
+    initialize_params {
+      image = "cos-cloud/cos-stable"
+      size  = 10
+    }
+  }
+
+  network_interface {
+    network       = "default"
+    access_config {}
+  }
+
+  metadata = {
+    gce-container-declaration = <<-EOT
+      spec:
+        containers:
+          - name: minecraft
+            image: gcr.io/google-containers/pause
+            env:
+              - name: EULA
+                value: "TRUE"
+              - name: MEMORY
+                value: "2G"
+              - name: ENABLE_RCON
+                value: "true"
+              - name: RCON_PORT
+                value: "25575"
+              - name: RCON_PASSWORD
+                value: "changeme"
+            ports:
+              - containerPort: 25565
+
+
+        restartPolicy: Always
+    EOT
+  }
+}
+
+###########################
+# Cloud Run API
+###########################
+resource "google_cloud_run_service" "api" {
+  name     = "minecraft-api"
+  location = var.region
+
+  template {
+    spec {
+      containers {
+        image = var.api_image
+
+        ports {
+          container_port = 8080
+        }
+
+        env {
+          name  = "PROJECT_ID"
+          value = var.project_id
+        }
+        env {
+          name  = "ZONE"
+          value = var.zone
+        }
+        env {
+          name  = "VM_NAME"
+          value = var.vm_name
+        }
+      }
+    }
+  }
+
+  traffic {
+    percent         = 100
+    latest_revision = true
+  }
+}
+
+resource "google_cloud_run_service_iam_member" "public" {
+  service  = google_cloud_run_service.api.name
+  location = google_cloud_run_service.api.location
+  role     = "roles/run.invoker"
+  member   = "allUsers"
 }

@@ -19,7 +19,7 @@ WORKDIR /opt/minecraft
 
 # Copy scripts
 COPY entrypoint.sh /opt/minecraft/entrypoint.sh
-COPY vm/inactivity-check.py /opt/minecraft/inactivity-check.py
+# COPY server/sidecar/inactivity-check.py /opt/minecraft/inactivity-check.py
 RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-check.py
 
 # Expose Minecraft & RCON

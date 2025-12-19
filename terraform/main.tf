@@ -124,6 +124,24 @@ resource "google_cloud_run_service" "api" {
           name  = "VM_NAME"
           value = var.vm_name
         }
+
+        # Set max instances
+        resources {
+          limits = {
+            "cpu"    = "1"
+            "memory" = "512Mi"
+          }
+        }
+      }
+
+      container_concurrency = 10
+      timeout_seconds      = 60
+      service_account_name = google_service_account.minecraft_vm.email
+
+      # Limit max instances
+      scaling {
+        max_instance_count = 1
+        min_instance_count = 0
       }
     }
   }
@@ -134,6 +152,7 @@ resource "google_cloud_run_service" "api" {
   }
 }
 
+# Allow unauthenticated access
 resource "google_cloud_run_service_iam_member" "public" {
   service  = google_cloud_run_service.api.name
   location = google_cloud_run_service.api.location

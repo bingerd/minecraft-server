@@ -1,18 +1,24 @@
 #!/bin/bash
 set -e
 
-# Start Minecraft server as PID 1
+# Start Minecraft server in background
 /start &
-echo "Waiting for Minecraft server RCON to be ready..."
 
-# Wait until RCON port is ready
+MC_PID=$!
+
+# Wait for RCON port to be ready
+echo "Waiting for Minecraft server RCON to be ready..."
 while ! nc -z localhost 25575; do
-    sleep 10
+    sleep 5
 done
 
-echo "Minecraft server is ready. Starting inactivity script..."
+echo "Minecraft server is ready. Starting inactivity watcher..."
 
-# Run Python inactivity script in a loop
-/opt/venv/bin/python -u /opt/minecraft/inactivity-check.py
+# Start the Python idle-watcher in background
+/opt/venv/bin/python -u /opt/minecraft/inactivity-check.py &
 
-/start
+PY_PID=$!
+
+# Wait for Minecraft process to exit
+wait $MC_PID
+echo "Minecraft server exited. Stopping container."

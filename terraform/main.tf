@@ -87,8 +87,8 @@ resource "google_compute_instance" "minecraft" {
     network       = "default"
     access_config {}
   }
-  
-  startup-script = <<-EOT
+
+  metadata_startup_script = <<-EOT
     #!/bin/bash
     # Install Google Cloud SDK on Container-Optimized OS
     set -e

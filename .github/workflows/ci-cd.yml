@@ -46,10 +46,6 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
-      - name: Build & Tag Minecraft Server Image
-        run: |
-          docker build -t minecraft-server $SERVER_DIR
-          docker tag minecraft-server $SERVER_IMAGE
 
       - name: Build & Tag Sidecar Image
         run: |
@@ -57,18 +53,16 @@ jobs:
           docker tag idle-monitor ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
 
 
-      # - name: Build & Tag API Image
-      #   run: |
-      #     docker build -t minecraft-api $API_DIR
-      #     docker tag minecraft-api $API_IMAGE
+      - name: Build & Tag API Image
+        run: |
+          docker build -t minecraft-api $API_DIR
+          docker tag minecraft-api $API_IMAGE
 
       - name: Push Sidecar Image
         run: |
           docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
-
-      - name: Push Docker Images
-        run: |
           docker push $API_IMAGE
+          
 
   # ========================
   # CD: Deploy or Destroy via Terraform

@@ -31,8 +31,7 @@ jobs:
       ZONE: ${{ secrets.GCP_ZONE }}
       SERVER_DIR: ./server
       API_DIR: ./api
-      SERVER_IMAGE: itzg/minecraft-server:latest
-      SIDECAR_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
+      SERVER_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
       API_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
 
     steps:
@@ -53,12 +52,6 @@ jobs:
           docker build -t minecraft-server $SERVER_DIR
           docker tag minecraft-server $SERVER_IMAGE
           docker push $SERVER_IMAGE
-
-      - name: Build & Push Sidecar Image
-        run: |
-          docker build -t idle-monitor $SERVER_DIR/sidecar
-          docker tag idle-monitor $SIDECAR_IMAGE
-          docker push $SIDECAR_IMAGE
 
       - name: Build & Push API Image
         run: |

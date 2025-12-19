@@ -10,16 +10,11 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Google Cloud SDK (official installer)
-RUN curl -fsSL https://sdk.cloud.google.com | bash
-
-# Add gcloud to PATH
-ENV PATH=/root/google-cloud-sdk/bin:$PATH
 
 WORKDIR /app
 
 # Install Python dependencies
-RUN pip install --no-cache-dir mcrcon python-dotenv
+RUN pip install --no-cache-dir mcrcon python-dotenv google-cloud-compute
 
 # Copy the inactivity checker script
 COPY inactivity-check.py .

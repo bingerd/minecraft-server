@@ -1,56 +1,48 @@
-import os, sys, subprocess
-import time
+import os, time, sys
 from mcrcon import MCRcon
-import dotenv
-
-dotenv.load_dotenv()
+from google.cloud import compute_v1
 
 RCON_HOST = os.getenv("RCON_HOST", "localhost")
 RCON_PORT = int(os.getenv("RCON_PORT", 25575))
-RCON_PASSWORD = os.getenv("RCON_PASSWORD", "changeme")
+RCON_PASSWORD = os.getenv("RCON_PASSWORD")
 IDLE_LIMIT = int(os.getenv("IDLE_LIMIT", 120))  # seconds
-SCHEDULE_INTERVAL = int(os.getenv("SCHEDULE_INTERVAL", 10))   # seconds
-STATE_FILE = "/tmp/last_active"
+INTERVAL = int(os.getenv("INTERVAL", 10))
+VM_NAME = os.getenv("VM_NAME")
+ZONE = os.getenv("ZONE")
+PROJECT = os.getenv("PROJECT_ID")
 
-# If state file doesn't exist, treat container start as last activity
-if not os.path.exists(STATE_FILE):
-    with open(STATE_FILE, "w") as f:
-        f.write(str(int(time.time())))
+last_active = time.time()
+compute_client = compute_v1.InstancesClient()
+
+print("Idle monitor started", flush=True)
 
 while True:
-    now = int(time.time())
-
+    now = time.time()
     try:
         with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT) as mcr:
-            players = mcr.command("list")
-            if "There are 0 of a max" not in players:
-                # Player online → update last activity
-                with open(STATE_FILE, "w") as f:
-                    f.write(str(now))
+            out = mcr.command("list")
+            print(out, flush=True)
+            if "There are 0 of a max" not in out:
+                last_active = now
     except Exception as e:
-        print(f"Error connecting to RCON: {e}", flush=True)
+        print(f"RCON not ready: {e}", flush=True)
 
-    # Read last active timestamp
-    with open(STATE_FILE) as f:
-        last = int(f.read())
-
-    if now - last > IDLE_LIMIT:
+    if now - last_active > IDLE_LIMIT:
+        print("Server idle. Sending stop command...", flush=True)
         try:
+            # Stop Minecraft first
             with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT) as mcr:
-                print("Server idle. Sending stop command...", flush=True)
                 mcr.command("stop")
-            
-            # Self-delete VM
-            print("Server idle. Deleting VM...", flush=True)
-            zone = os.getenv("ZONE", "europe-west1-b")
-            vm_name = os.getenv("VM_NAME", "minecraft-server")
-            subprocess.run([
-                "gcloud", "compute", "instances", "delete", vm_name,
-                "--zone", zone,
-                "--quiet"
-            ])
-            sys.exit(0)
         except Exception as e:
-            print(f"Error sending stop command: {e}", flush=True)
+            print(f"RCON stop failed: {e}", flush=True)
 
-    time.sleep(SCHEDULE_INTERVAL)
+        print("Stopping VM via API...", flush=True)
+        try:
+            operation = compute_client.stop(project=PROJECT, zone=ZONE, instance=VM_NAME)
+            print(f"Stop operation started: {operation.name}", flush=True)
+        except Exception as e:
+            print(f"Failed to stop VM: {e}", flush=True)
+
+        sys.exit(0)
+
+    time.sleep(INTERVAL)

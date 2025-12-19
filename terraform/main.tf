@@ -89,12 +89,14 @@ resource "google_compute_instance" "minecraft" {
   }
 
   metadata = {
+      # Enable Cloud Logging for COS
+    google-logging-enabled = "true"
+    
     gce-container-declaration = <<-EOT
       spec:
         containers:
           - name: minecraft
             image: "${var.minecraft_image}"
-            command: ["sh", "-c", "java -Xmx$MEMORY -Xms$MEMORY -jar server.jar nogui"]
             env:
               - name: EULA
                 value: "TRUE"

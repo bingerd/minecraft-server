@@ -87,6 +87,20 @@ resource "google_compute_instance" "minecraft" {
     network       = "default"
     access_config {}
   }
+  
+  startup-script = <<-EOT
+    #!/bin/bash
+    # Install Google Cloud SDK on Container-Optimized OS
+    set -e
+
+    # Enable package manager
+    sudo cos-extensions install cloud-sdk
+
+    # Verify installation
+    gcloud version
+
+    echo "Google Cloud SDK installed successfully"
+  EOT
 
   metadata = {
       # Enable Cloud Logging for COS

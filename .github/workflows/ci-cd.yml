@@ -31,7 +31,7 @@ jobs:
       ZONE: ${{ secrets.GCP_ZONE }}
       SERVER_DIR: ./server
       API_DIR: ./api
-      SERVER_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
+      SERVER_IMAGE: itzg/minecraft-server:latest
       SIDECAR_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
       API_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
 

@@ -86,7 +86,7 @@ resource "google_compute_instance" "minecraft" {
       spec:
         containers:
           - name: minecraft
-            image: var.server_image
+            image: var.minecraft_image
             env:
               - name: EULA
                 value: "TRUE"

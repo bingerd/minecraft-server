@@ -86,7 +86,7 @@ resource "google_compute_instance" "minecraft" {
       spec:
         containers:
           - name: minecraft
-            image: var.minecraft_image
+            image: ${var.minecraft_image}
             env:
               - name: EULA
                 value: "TRUE"
@@ -115,7 +115,7 @@ resource "google_cloud_run_service" "api" {
   template {
     spec {
       containers {
-        image = var.api_image
+        image = ${var.api_image}
 
         ports {
           container_port = 8080

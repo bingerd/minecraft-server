@@ -116,7 +116,7 @@ jobs:
           TF_VAR_region: ${{ secrets.GCP_REGION }}
           TF_VAR_zone: ${{ secrets.GCP_ZONE }}
           TF_VAR_vm_name: minecraft-server
-          TF_VAR_minecraft_image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
+          TF_VAR_minecraft_image: itzg/minecraft-server:latest
           TF_VAR_sidecar_image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
           TF_VAR_api_image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
         run: |

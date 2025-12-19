@@ -36,11 +36,3 @@ variable "api_image" {
   description = "Full Artifact Registry image URL for the Cloud Run API"
   type        = string
 }
-
-# ===============================
-# Billing / Budget
-# ===============================
-variable "billing_account_id" {
-  type        = string
-  description = "Billing account ID for budget alerts"
-}

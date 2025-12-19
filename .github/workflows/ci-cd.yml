@@ -119,4 +119,10 @@ jobs:
           else
             echo "Applying Terraform deployment..."
             terraform apply -auto-approve
+            
+            echo "Restarting Minecraft VM..."
+            gcloud compute instances reset ${{ env.TF_VAR_vm_name }} \
+              --zone=${{ env.TF_VAR_zone }} \
+              --project=${{ env.TF_VAR_project_id }} \
+              --quiet
           fi

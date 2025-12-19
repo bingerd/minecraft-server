@@ -126,3 +126,4 @@ jobs:
           else
             echo "Applying Terraform deployment..."
             terraform apply -auto-approve
+          fi

@@ -1,0 +1,113 @@
+name: Minecraft CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ========================
+  # CI: Build & Push Docker Images
+  # ========================
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for Workload Identity Federation
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      ZONE: ${{ secrets.GCP_ZONE }}
+      SERVER_DIR: ./server
+      SIDECAR_DIR: ./server/vm
+      API_DIR: ./api
+      SERVER_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
+      # SIDECAR_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/inactivity-sidecar:latest
+      API_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Authenticate to GCP via WIF
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # Configure Docker to push to Artifact Registry
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
+
+      # Build & tag Minecraft server image
+      - name: Build & Tag Minecraft Server Image
+        run: |
+          docker build -t minecraft-server $SERVER_DIR
+          docker tag minecraft-server $SERVER_IMAGE
+
+
+      # Build & tag API image
+      - name: Build & Tag API Image
+        run: |
+          docker build -t minecraft-api $API_DIR
+          docker tag minecraft-api $API_IMAGE
+
+      # Push all images
+      - name: Push Docker Images
+        run: |
+          docker push $SERVER_IMAGE
+          docker push $API_IMAGE
+
+  # ========================
+  # CD: Deploy VM & Cloud Run via Terraform
+  # ========================
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      REGION: ${{ secrets.GCP_REGION }}
+      ZONE: ${{ secrets.GCP_ZONE }}
+      VM_NAME: minecraft-server
+      CLOUD_RUN_SERVICE: minecraft-api
+      TERRAFORM_DIR: ./terraform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Authenticate to GCP via WIF
+      - name: Authenticate to GCP via WIF
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # Setup gcloud
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          install_components: 'beta'
+
+      # Setup Terraform
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.7
+
+      # Terraform init
+      - name: Terraform Init
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform init
+
+      # Terraform apply full deploy (VM + Cloud Run + WIF)
+      - name: Terraform Apply - Full Deploy
+        working-directory: ${{ env.TERRAFORM_DIR }}
+        run: terraform apply -auto-approve

@@ -56,6 +56,28 @@ async def status():
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+
+@app.get("/ip")
+async def get_external_ip():
+    try:
+        resp = compute.instances().get(
+            project=PROJECT_ID,
+            zone=ZONE,
+            instance=VM_NAME
+        ).execute()
+
+        # Extract external IP
+        network_interfaces = resp.get("networkInterfaces", [])
+        if network_interfaces:
+            access_configs = network_interfaces[0].get("accessConfigs", [])
+            if access_configs:
+                external_ip = access_configs[0].get("natIP")
+                return JSONResponse({"external_ip": external_ip})
+        
+        return JSONResponse({"external_ip": None, "message": "No external IP found"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 # -------------------------------
 # Cloud Run entrypoint
 # -------------------------------

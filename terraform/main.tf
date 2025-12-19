@@ -4,20 +4,6 @@ provider "google" {
   zone    = var.zone
 }
 
-###########################
-# Artifact Registries
-###########################
-resource "google_artifact_registry_repository" "minecraft_server" {
-  location      = var.region
-  repository_id = "minecraft-server"
-  format        = "DOCKER"
-}
-
-resource "google_artifact_registry_repository" "minecraft_api" {
-  location      = var.region
-  repository_id = "minecraft-api"
-  format        = "DOCKER"
-}
 
 ###########################
 # Firewall for Minecraft
@@ -36,7 +22,7 @@ resource "google_compute_firewall" "minecraft" {
 }
 
 ###########################
-# Service Account
+# Service Account for VM
 ###########################
 resource "google_service_account" "minecraft_vm" {
   account_id   = "minecraft-vm-sa"
@@ -51,18 +37,17 @@ resource "google_artifact_registry_repository_iam_member" "minecraft_server_pull
   member     = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
-# Allow VM to delete itself
+# VM IAM Roles
 resource "google_project_iam_member" "vm_self_delete" {
   project = var.project_id
-  role   = "roles/compute.instanceAdmin.v1"
-  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
+  role    = "roles/compute.instanceAdmin.v1"
+  member  = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
-# Allow VM to write logs
 resource "google_project_iam_member" "vm_logging" {
   project = var.project_id
-  role   = "roles/logging.logWriter"
-  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
 ###########################
@@ -101,7 +86,7 @@ resource "google_compute_instance" "minecraft" {
       spec:
         containers:
           - name: minecraft
-            image: gcr.io/google-containers/pause
+            image: var.server_image
             env:
               - name: EULA
                 value: "TRUE"
@@ -115,8 +100,6 @@ resource "google_compute_instance" "minecraft" {
                 value: "changeme"
             ports:
               - containerPort: 25565
-
-
         restartPolicy: Always
     EOT
   }
@@ -166,3 +149,4 @@ resource "google_cloud_run_service_iam_member" "public" {
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
+

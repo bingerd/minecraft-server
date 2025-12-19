@@ -50,6 +50,12 @@ resource "google_artifact_registry_repository_iam_member" "minecraft_image_pull"
   member = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
+resource "google_project_iam_member" "minecraft_artifact_reader" {
+  project = var.project_id
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${google_service_account.minecraft_vm.email}"
+}
+
 
 ###########################
 # Minecraft Container VM

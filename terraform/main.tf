@@ -104,6 +104,12 @@ resource "google_cloud_run_service" "api" {
   location = var.region
 
   template {
+    metadat {
+      annotations = {
+        "autoscaling.knative.dev/maxScale": "1"
+        "run.googleapis.com/cpu-throttling": "false"
+      }
+    }
     spec {
       containers {
         image = var.api_image
@@ -138,11 +144,6 @@ resource "google_cloud_run_service" "api" {
       timeout_seconds      = 60
       service_account_name = google_service_account.minecraft_vm.email
 
-      # Limit max instances
-      scaling {
-        max_instance_count = 1
-        min_instance_count = 0
-      }
     }
   }
 

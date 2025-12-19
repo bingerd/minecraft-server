@@ -15,14 +15,14 @@ on:
 
 jobs:
   # ========================
-  # CI: Build & Push Docker Images
+  # CI: Build & Push Docker Images (only deploy)
   # ========================
   build-and-push:
     if: ${{ github.event.inputs.action == 'deploy' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write  # Required for Workload Identity Federation
+      id-token: write
 
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -37,30 +37,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Authenticate to GCP via WIF
       - name: Authenticate to GCP via WIF
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      # Configure Docker to push to Artifact Registry
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker ${{ secrets.GCP_REGION }}-docker.pkg.dev
 
-      # Build & tag Minecraft server image
       - name: Build & Tag Minecraft Server Image
         run: |
           docker build -t minecraft-server $SERVER_DIR
           docker tag minecraft-server $SERVER_IMAGE
 
-      # Build & tag API image
       - name: Build & Tag API Image
         run: |
           docker build -t minecraft-api $API_DIR
           docker tag minecraft-api $API_IMAGE
 
-      # Push all images
       - name: Push Docker Images
         run: |
           docker push $SERVER_IMAGE
@@ -69,8 +64,7 @@ jobs:
   # ========================
   # CD: Deploy or Destroy via Terraform
   # ========================
-  deploy-or-destroy:
-    needs: build-and-push
+  terraform-deploy-or-destroy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -88,33 +82,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Authenticate to GCP via WIF
       - name: Authenticate to GCP via WIF
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
           service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
 
-      # Setup gcloud
       - name: Setup gcloud
         uses: google-github-actions/setup-gcloud@v1
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
           install_components: 'beta'
 
-      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.5.7
 
-      # Terraform init
       - name: Terraform Init
         working-directory: ${{ env.TERRAFORM_DIR }}
         run: terraform init
 
-      # Terraform Apply or Destroy
-      - name: Terraform Apply/Destroy
+      - name: Terraform Apply or Destroy
         working-directory: ${{ env.TERRAFORM_DIR }}
         env: 
           TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
@@ -125,7 +114,9 @@ jobs:
           TF_VAR_api_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            echo "Destroying all Terraform-managed resources..."
             terraform destroy -auto-approve
           else
+            echo "Applying Terraform deployment..."
             terraform apply -auto-approve
           fi

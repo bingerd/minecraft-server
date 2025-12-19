@@ -94,6 +94,7 @@ resource "google_compute_instance" "minecraft" {
         containers:
           - name: minecraft
             image: "${var.minecraft_image}"
+            command: ["sh", "-c", "java -Xmx$MEMORY -Xms$MEMORY -jar server.jar nogui"]
             env:
               - name: EULA
                 value: "TRUE"

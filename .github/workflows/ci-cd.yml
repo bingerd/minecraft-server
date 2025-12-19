@@ -1,6 +1,5 @@
 name: Minecraft CI/CD
 
-# Trigger manually from GitHub Actions UI
 on:
   workflow_dispatch:
     inputs:
@@ -11,16 +10,16 @@ on:
         type: choice
         options:
           - deploy
-          - destroy
-          - build
           - deploy-only
+          - bake/push
+          - destroy
 
 ##############################
 # Job 1: Build & Push Docker Images
 ##############################
 jobs:
   build-and-push:
-    if: ${{ github.event.inputs.action == 'deploy' || github.event.inputs.action == 'build' }}
+    if: ${{ github.event.inputs.action == 'deploy' || github.event.inputs.action == 'bake/push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -71,8 +70,7 @@ jobs:
 # Job 2: Deploy / Destroy via Terraform
 ##############################
   terraform-deploy-or-destroy:
-    needs: build-and-push
-    if: ${{ github.event.inputs.action != 'build' }}
+    if: ${{ github.event.inputs.action != 'bake/push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read

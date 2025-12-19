@@ -1,15 +1,24 @@
 name: Minecraft CI/CD
 
+# Trigger manually from GitHub Actions UI
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Choose action'
+        required: true
+        default: 'deploy'
+        type: choice
+        options:
+          - deploy
+          - destroy
 
 jobs:
   # ========================
   # CI: Build & Push Docker Images
   # ========================
   build-and-push:
+    if: ${{ github.event.inputs.action == 'deploy' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -20,10 +29,8 @@ jobs:
       REGION: ${{ secrets.GCP_REGION }}
       ZONE: ${{ secrets.GCP_ZONE }}
       SERVER_DIR: ./server
-      SIDECAR_DIR: ./server/vm
       API_DIR: ./api
       SERVER_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
-      # SIDECAR_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/inactivity-sidecar:latest
       API_IMAGE: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
 
     steps:
@@ -47,7 +54,6 @@ jobs:
           docker build -t minecraft-server $SERVER_DIR
           docker tag minecraft-server $SERVER_IMAGE
 
-
       # Build & tag API image
       - name: Build & Tag API Image
         run: |
@@ -61,9 +67,9 @@ jobs:
           docker push $API_IMAGE
 
   # ========================
-  # CD: Deploy VM & Cloud Run via Terraform
+  # CD: Deploy or Destroy via Terraform
   # ========================
-  deploy:
+  deploy-or-destroy:
     needs: build-and-push
     runs-on: ubuntu-latest
     permissions:
@@ -102,14 +108,13 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-
       # Terraform init
       - name: Terraform Init
         working-directory: ${{ env.TERRAFORM_DIR }}
         run: terraform init
 
-      # Terraform apply full deploy (VM + Cloud Run + WIF)
-      - name: Terraform Apply - Full Deploy
+      # Terraform Apply or Destroy
+      - name: Terraform Apply/Destroy
         working-directory: ${{ env.TERRAFORM_DIR }}
         env: 
           TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
@@ -118,4 +123,9 @@ jobs:
           TF_VAR_vm_name: minecraft-server
           TF_VAR_minecraft_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
           TF_VAR_api_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
-        run: terraform apply -auto-approve
+        run: |
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+            terraform destroy -auto-approve
+          else
+            terraform apply -auto-approve
+          fi

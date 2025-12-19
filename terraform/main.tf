@@ -91,7 +91,7 @@ resource "google_compute_instance" "minecraft" {
   metadata = {
       # Enable Cloud Logging for COS
     google-logging-enabled = "true"
-    
+
     gce-container-declaration = <<-EOT
       spec:
         containers:
@@ -111,6 +111,8 @@ resource "google_compute_instance" "minecraft" {
             ports:
               - containerPort: 25565
               - containerPort: 25575
+            stdin: false
+            tty: false
 
         restartPolicy: Always
     EOT

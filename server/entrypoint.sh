@@ -7,7 +7,7 @@ echo "Waiting for Minecraft server RCON to be ready..."
 
 # Wait until RCON port is ready
 while ! nc -z localhost 25575; do
-    sleep 5
+    sleep 10
 done
 
 echo "Minecraft server is ready. Starting inactivity script..."

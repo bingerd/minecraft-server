@@ -104,7 +104,7 @@ resource "google_cloud_run_service" "api" {
   location = var.region
 
   template {
-    metadat {
+    metadata {
       annotations = {
         "autoscaling.knative.dev/maxScale": "1"
         "run.googleapis.com/cpu-throttling": "false"

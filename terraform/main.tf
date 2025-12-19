@@ -28,14 +28,6 @@ resource "google_service_account" "minecraft_vm" {
   display_name = "Minecraft VM Service Account"
 }
 
-# Artifact Registry pull access
-resource "google_artifact_registry_repository_iam_member" "minecraft_server_pull" {
-  repository = google_artifact_registry_repository.minecraft_server.name
-  location   = var.region
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${google_service_account.minecraft_vm.email}"
-}
-
 # VM IAM Roles
 resource "google_project_iam_member" "vm_self_delete" {
   project = var.project_id

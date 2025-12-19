@@ -51,10 +51,20 @@ jobs:
           docker build -t minecraft-server $SERVER_DIR
           docker tag minecraft-server $SERVER_IMAGE
 
+      - name: Build & Tag Sidecar Image
+        run: |
+          docker build -t idle-monitor ./server/sidecar
+          docker tag idle-monitor ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/idle-monitor:latest
+
+
       - name: Build & Tag API Image
         run: |
           docker build -t minecraft-api $API_DIR
           docker tag minecraft-api $API_IMAGE
+
+      - name: Push Sidecar Image
+        run: |
+          docker push ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/idle-monitor:latest
 
       - name: Push Docker Images
         run: |
@@ -111,6 +121,7 @@ jobs:
           TF_VAR_zone: ${{ secrets.GCP_ZONE }}
           TF_VAR_vm_name: minecraft-server
           TF_VAR_minecraft_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-server/minecraft-server:latest
+          TF_VAR_sidecar_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/idle-monitor:latest
           TF_VAR_api_image: europe-west1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then

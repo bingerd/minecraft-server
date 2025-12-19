@@ -36,3 +36,8 @@ variable "api_image" {
   description = "Full Artifact Registry image URL for the Cloud Run API"
   type        = string
 }
+
+variable "sidecar_image" {
+  type        = string
+  description = "Docker image for the idle monitor sidecar"
+}

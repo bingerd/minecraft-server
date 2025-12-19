@@ -107,9 +107,30 @@ resource "google_compute_instance" "minecraft" {
                 value: "changeme"
             ports:
               - containerPort: 25565
+              - containerPort: 25575
+
+          - name: idle-monitor
+            image: "${var.sidecar_image}"
+            env:
+              - name: RCON_HOST
+                value: "localhost"
+              - name: RCON_PORT
+                value: "25575"
+              - name: RCON_PASSWORD
+                value: "changeme"
+              - name: IDLE_LIMIT
+                value: "600"         # 10 minutes
+              - name: INTERVAL
+                value: "15"          # check every 15s
+              - name: VM_NAME
+                value: "${var.vm_name}"
+              - name: ZONE
+                value: "${var.zone}"
+
         restartPolicy: Always
     EOT
   }
+
 }
 
 ###########################

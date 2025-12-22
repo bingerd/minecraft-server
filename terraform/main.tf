@@ -98,10 +98,10 @@ resource "google_compute_instance" "minecraft" {
     automatic_restart = false
   }
 
-  # Boot disk
+  # Boot disk with Ubuntu 22.04 LTS
   boot_disk {
     initialize_params {
-      image = "cos-cloud/cos-stable"
+      image = "ubuntu-os-cloud/ubuntu-2204-jammy-v20251219" # latest Ubuntu 22.04 LTS
       size  = 10
     }
   }
@@ -118,25 +118,29 @@ resource "google_compute_instance" "minecraft" {
   }
 
   ###########################
-  # Startup script: mount disk under /mnt/disks
+  # Startup script for Ubuntu
   ###########################
   metadata_startup_script = <<-EOF
     #!/bin/bash
     set -e
 
+    # Install Docker
+    apt-get update
+    apt-get install -y docker.io
+    systemctl enable docker
+    systemctl start docker
+
+    # Mount persistent disk
     DISK=/dev/disk/by-id/google-minecraft-data
     MOUNT=/mnt/disks/minecraft-data
 
-    # Format disk if not formatted
     if ! blkid $DISK; then
       mkfs.ext4 -F $DISK
     fi
 
-    # Create mount point
     mkdir -p $MOUNT
     mount $DISK $MOUNT
 
-    # Persist in fstab
     grep -q "$MOUNT" /etc/fstab || echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
   EOF
 

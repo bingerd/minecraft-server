@@ -50,6 +50,22 @@ resource "google_project_iam_member" "minecraft_artifact_reader" {
 }
 
 ###########################
+# GCS Bucket for Backups
+###########################
+resource "google_storage_bucket" "minecraft_backups" {
+  name          = "${var.project_id}-minecraft-backups"
+  location      = var.region
+  force_destroy = false
+  uniform_bucket_level_access = true
+}
+
+resource "google_storage_bucket_iam_member" "minecraft_vm_write" {
+  bucket = google_storage_bucket.minecraft_backups.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
+}
+
+###########################
 # Persistent Disk (World)
 ###########################
 resource "google_compute_disk" "minecraft_data" {
@@ -82,7 +98,7 @@ resource "google_compute_instance" "minecraft" {
     automatic_restart = false
   }
 
-  # Boot disk (REQUIRED)
+  # Boot disk
   boot_disk {
     initialize_params {
       image = "cos-cloud/cos-stable"
@@ -102,7 +118,7 @@ resource "google_compute_instance" "minecraft" {
   }
 
   ###########################
-  # Startup script: mount disk
+  # Startup script: mount disk + prepare GCS tools
   ###########################
   metadata_startup_script = <<-EOF
     #!/bin/bash
@@ -111,15 +127,26 @@ resource "google_compute_instance" "minecraft" {
     DISK=/dev/disk/by-id/google-minecraft-data
     MOUNT=/mnt/minecraft-data
 
+    # Format if not already formatted
     if ! blkid $DISK; then
       mkfs.ext4 -F $DISK
     fi
 
+    # Mount the disk
     mkdir -p $MOUNT
     mount $DISK $MOUNT
 
+    # Persist in fstab
     grep -q "$MOUNT" /etc/fstab || \
       echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
+
+    # Optional: install gcloud SDK if you want to use gsutil inside container
+    apt-get update
+    apt-get install -y curl apt-transport-https gnupg lsb-release ca-certificates
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
+    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
+      | tee /etc/apt/sources.list.d/google-cloud-sdk.list
+    apt-get update && apt-get install -y google-cloud-sdk
   EOF
 
   ###########################

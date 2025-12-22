@@ -101,10 +101,11 @@ resource "google_compute_instance" "minecraft" {
   # Boot disk with Ubuntu 22.04 LTS
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-jammy-v20251219" # latest Ubuntu 22.04 LTS
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
       size  = 10
     }
   }
+
 
   # Persistent world disk
   attached_disk {

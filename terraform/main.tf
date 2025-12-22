@@ -28,7 +28,9 @@ resource "google_service_account" "minecraft_vm" {
   display_name = "Minecraft VM Service Account"
 }
 
-# VM IAM Roles
+###########################
+# IAM Roles
+###########################
 resource "google_project_iam_member" "vm_self_delete" {
   project = var.project_id
   role    = "roles/compute.instanceAdmin.v1"
@@ -41,21 +43,25 @@ resource "google_project_iam_member" "vm_logging" {
   member  = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
-resource "google_artifact_registry_repository_iam_member" "minecraft_image_pull" {
-  project    = var.project_id
-  location   = "europe-west1"
-  repository = "minecraft-server"
-
-  role   = "roles/artifactregistry.reader"
-  member = "serviceAccount:${google_service_account.minecraft_vm.email}"
-}
-
 resource "google_project_iam_member" "minecraft_artifact_reader" {
   project = var.project_id
   role    = "roles/artifactregistry.reader"
   member  = "serviceAccount:${google_service_account.minecraft_vm.email}"
 }
 
+###########################
+# Persistent Disk (World)
+###########################
+resource "google_compute_disk" "minecraft_data" {
+  name = "minecraft-data"
+  zone = var.zone
+  type = "pd-balanced"
+  size = 20
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
 
 ###########################
 # Minecraft Container VM
@@ -76,6 +82,7 @@ resource "google_compute_instance" "minecraft" {
     automatic_restart = false
   }
 
+  # Boot disk (REQUIRED)
   boot_disk {
     initialize_params {
       image = "cos-cloud/cos-stable"
@@ -83,14 +90,42 @@ resource "google_compute_instance" "minecraft" {
     }
   }
 
+  # Persistent world disk
+  attached_disk {
+    source      = google_compute_disk.minecraft_data.id
+    device_name = "minecraft-data"
+  }
+
   network_interface {
     network       = "default"
     access_config {}
   }
 
+  ###########################
+  # Startup script: mount disk
+  ###########################
+  metadata_startup_script = <<-EOF
+    #!/bin/bash
+    set -e
 
+    DISK=/dev/disk/by-id/google-minecraft-data
+    MOUNT=/mnt/minecraft-data
+
+    if ! blkid $DISK; then
+      mkfs.ext4 -F $DISK
+    fi
+
+    mkdir -p $MOUNT
+    mount $DISK $MOUNT
+
+    grep -q "$MOUNT" /etc/fstab || \
+      echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
+  EOF
+
+  ###########################
+  # Container declaration
+  ###########################
   metadata = {
-      # Enable Cloud Logging for COS
     google-logging-enabled = "true"
 
     gce-container-declaration = <<-EOT
@@ -112,13 +147,17 @@ resource "google_compute_instance" "minecraft" {
             ports:
               - containerPort: 25565
               - containerPort: 25575
-            stdin: false
-            tty: false
-
+            volumeMounts:
+              - name: mc-data
+                mountPath: /data
+        volumes:
+          - name: mc-data
+            hostPath:
+              path: /mnt/minecraft-data
+              type: Directory
         restartPolicy: Always
     EOT
   }
-
 }
 
 ###########################
@@ -131,10 +170,11 @@ resource "google_cloud_run_service" "api" {
   template {
     metadata {
       annotations = {
-        "autoscaling.knative.dev/maxScale": "1"
-        "run.googleapis.com/cpu-throttling": "false"
+        "autoscaling.knative.dev/maxScale"      = "1"
+        "run.googleapis.com/cpu-throttling"     = "false"
       }
     }
+
     spec {
       containers {
         image = var.api_image
@@ -147,20 +187,21 @@ resource "google_cloud_run_service" "api" {
           name  = "PROJECT_ID"
           value = var.project_id
         }
+
         env {
           name  = "ZONE"
           value = var.zone
         }
+
         env {
           name  = "VM_NAME"
           value = var.vm_name
         }
 
-        # Set max instances
         resources {
           limits = {
-            "cpu"    = "1"
-            "memory" = "512Mi"
+            cpu    = "1"
+            memory = "512Mi"
           }
         }
       }
@@ -168,7 +209,6 @@ resource "google_cloud_run_service" "api" {
       container_concurrency = 10
       timeout_seconds      = 60
       service_account_name = google_service_account.minecraft_vm.email
-
     }
   }
 
@@ -178,7 +218,6 @@ resource "google_cloud_run_service" "api" {
   }
 }
 
-# Allow unauthenticated access
 resource "google_cloud_run_service_iam_member" "public" {
   service  = google_cloud_run_service.api.name
   location = google_cloud_run_service.api.location

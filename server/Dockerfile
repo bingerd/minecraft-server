@@ -14,7 +14,10 @@ RUN apt-get update && apt-get install -y \
     apt-transport-https \
     gnupg \
     lsb-release \
-    ca-certificates
+    ca-certificates \
+    libffi-dev \
+    libssl-dev
+
 
 # Add Google Cloud SDK repo key
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
@@ -38,6 +41,10 @@ WORKDIR /opt/minecraft
 COPY entrypoint.sh /opt/minecraft/entrypoint.sh
 COPY /vm/inactivity-check.py /opt/minecraft/inactivity-check.py
 RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-check.py
+
+# Add Cloud SDK to PATH
+ENV PATH=$PATH:/usr/bin/google-cloud-sdk/bin
+
 
 # Expose Minecraft & RCON
 EXPOSE 25565 25575

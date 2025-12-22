@@ -29,7 +29,7 @@ resource "google_service_account" "minecraft_vm" {
 }
 
 ###########################
-# IAM Roles
+# IAM Roles for VM SA
 ###########################
 resource "google_project_iam_member" "vm_self_delete" {
   project = var.project_id
@@ -53,10 +53,10 @@ resource "google_project_iam_member" "minecraft_artifact_reader" {
 # GCS Bucket for Backups
 ###########################
 resource "google_storage_bucket" "minecraft_backups" {
-  name          = "${var.project_id}-minecraft-backups"
-  location      = var.region
-  force_destroy = false
-  uniform_bucket_level_access = true
+  name                         = "${var.project_id}-minecraft-backups"
+  location                     = var.region
+  force_destroy                = false
+  uniform_bucket_level_access  = true
 }
 
 resource "google_storage_bucket_iam_member" "minecraft_vm_write" {
@@ -118,35 +118,26 @@ resource "google_compute_instance" "minecraft" {
   }
 
   ###########################
-  # Startup script: mount disk + prepare GCS tools
+  # Startup script: mount disk under /mnt/disks
   ###########################
   metadata_startup_script = <<-EOF
     #!/bin/bash
     set -e
 
     DISK=/dev/disk/by-id/google-minecraft-data
-    MOUNT=/mnt/minecraft-data
+    MOUNT=/mnt/disks/minecraft-data
 
-    # Format if not already formatted
+    # Format disk if not formatted
     if ! blkid $DISK; then
       mkfs.ext4 -F $DISK
     fi
 
-    # Mount the disk
+    # Create mount point
     mkdir -p $MOUNT
     mount $DISK $MOUNT
 
     # Persist in fstab
-    grep -q "$MOUNT" /etc/fstab || \
-      echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
-
-    # Optional: install gcloud SDK if you want to use gsutil inside container
-    apt-get update
-    apt-get install -y curl apt-transport-https gnupg lsb-release ca-certificates
-    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg
-    echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
-      | tee /etc/apt/sources.list.d/google-cloud-sdk.list
-    apt-get update && apt-get install -y google-cloud-sdk
+    grep -q "$MOUNT" /etc/fstab || echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
   EOF
 
   ###########################
@@ -180,7 +171,7 @@ resource "google_compute_instance" "minecraft" {
         volumes:
           - name: mc-data
             hostPath:
-              path: /mnt/minecraft-data
+              path: /mnt/disks/minecraft-data
               type: Directory
         restartPolicy: Always
     EOT
@@ -197,8 +188,8 @@ resource "google_cloud_run_service" "api" {
   template {
     metadata {
       annotations = {
-        "autoscaling.knative.dev/maxScale"      = "1"
-        "run.googleapis.com/cpu-throttling"     = "false"
+        "autoscaling.knative.dev/maxScale"  = "1"
+        "run.googleapis.com/cpu-throttling" = "false"
       }
     }
 
@@ -234,8 +225,8 @@ resource "google_cloud_run_service" "api" {
       }
 
       container_concurrency = 10
-      timeout_seconds      = 60
-      service_account_name = google_service_account.minecraft_vm.email
+      timeout_seconds       = 60
+      service_account_name  = google_service_account.minecraft_vm.email
     }
   }
 

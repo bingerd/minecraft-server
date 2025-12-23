@@ -201,6 +201,16 @@ resource "google_cloud_run_service" "api" {
           value = var.vm_name
         }
 
+        env {
+          name  = "CLOUDFLARE_API_TOKEN"
+          value = var.cloudflare_api_token
+        }
+
+        env {
+          name  = "CLOUDFLARE_ZONE_ID"
+          value = var.cloudflare_zone_id
+        }
+
         resources {
           limits = {
             cpu    = "1"

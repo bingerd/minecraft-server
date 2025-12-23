@@ -21,8 +21,8 @@ SSH_USER = os.getenv("SSH_USER", "your-ssh-user")
 SSH_KEY_PATH = os.getenv("SSH_KEY_PATH", "~/.ssh/id_rsa")  # path to your private key
 
 # Cloudflare config
-CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "Pw3CRMswloniTqzmXvZrqHxIm-vAr9JYV5YWxspc")
-CLOUDFLARE_ZONE_ID = os.getenv("CLOUDFLARE_ZONE_ID", "0479794b26e6322d9ebf93efb5584d1c")  # get from dashboard
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+CLOUDFLARE_ZONE_ID = os.getenv("CLOUDFLARE_ZONE_ID")  # get from dashboard
 SUBDOMAIN = "mc.bngrd.com"
 
 # curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \

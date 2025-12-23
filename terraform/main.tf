@@ -143,6 +143,8 @@ grep -q "$MOUNT" /etc/fstab || echo "$DISK $MOUNT ext4 defaults,nofail 0 2" >> /
 
 docker rm -f minecraft || true
 
+gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
+
 docker run -d \
   --name minecraft \
   --restart unless-stopped \

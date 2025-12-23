@@ -53,10 +53,9 @@ resource "google_project_iam_member" "minecraft_artifact_reader" {
 # GCS Bucket for Backups
 ###########################
 resource "google_storage_bucket" "minecraft_backups" {
-  name                         = "${var.project_id}-minecraft-backups"
-  location                     = var.region
-  force_destroy                = false
-  uniform_bucket_level_access  = true
+  name                        = "${var.project_id}-minecraft-backups"
+  location                    = var.region
+  uniform_bucket_level_access = true
 }
 
 resource "google_storage_bucket_iam_member" "minecraft_vm_write" {
@@ -80,7 +79,7 @@ resource "google_compute_disk" "minecraft_data" {
 }
 
 ###########################
-# Minecraft Container VM
+# Minecraft VM (Ubuntu + Docker)
 ###########################
 resource "google_compute_instance" "minecraft" {
   name         = var.vm_name
@@ -98,7 +97,6 @@ resource "google_compute_instance" "minecraft" {
     automatic_restart = false
   }
 
-  # Boot disk with Ubuntu 22.04 LTS
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
@@ -106,8 +104,6 @@ resource "google_compute_instance" "minecraft" {
     }
   }
 
-
-  # Persistent world disk
   attached_disk {
     source      = google_compute_disk.minecraft_data.id
     device_name = "minecraft-data"
@@ -119,68 +115,47 @@ resource "google_compute_instance" "minecraft" {
   }
 
   ###########################
-  # Startup script for Ubuntu
+  # Startup Script (SAFE)
   ###########################
   metadata_startup_script = <<-EOF
-    #!/bin/bash
-    set -e
+#!/bin/bash
+set -e
 
-    # Install Docker
-    apt-get update
-    apt-get install -y docker.io
-    systemctl enable docker
-    systemctl start docker
+apt-get update
+apt-get install -y docker.io
+systemctl enable docker
+systemctl start docker
 
-    # Mount persistent disk
-    DISK=/dev/disk/by-id/google-minecraft-data
-    MOUNT=/mnt/disks/minecraft-data
+DISK=/dev/disk/by-id/google-minecraft-data
+MOUNT=/mnt/disks/minecraft-data
 
-    if ! blkid $DISK; then
-      mkfs.ext4 -F $DISK
-    fi
+mkdir -p "$MOUNT"
 
-    mkdir -p $MOUNT
-    mount $DISK $MOUNT
+if ! blkid "$DISK" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$DISK"
+fi
 
-    grep -q "$MOUNT" /etc/fstab || echo "$DISK $MOUNT ext4 defaults 0 2" >> /etc/fstab
-  EOF
+if ! mountpoint -q "$MOUNT"; then
+  mount "$DISK" "$MOUNT"
+fi
 
-  ###########################
-  # Container declaration
-  ###########################
-  metadata = {
-    google-logging-enabled = "true"
+grep -q "$MOUNT" /etc/fstab || echo "$DISK $MOUNT ext4 defaults,nofail 0 2" >> /etc/fstab
 
-    gce-container-declaration = <<-EOT
-      spec:
-        containers:
-          - name: minecraft
-            image: "${var.minecraft_image}"
-            env:
-              - name: EULA
-                value: "TRUE"
-              - name: MEMORY
-                value: "2G"
-              - name: ENABLE_RCON
-                value: "true"
-              - name: RCON_PORT
-                value: "25575"
-              - name: RCON_PASSWORD
-                value: "changeme"
-            ports:
-              - containerPort: 25565
-              - containerPort: 25575
-            volumeMounts:
-              - name: mc-data
-                mountPath: /data
-        volumes:
-          - name: mc-data
-            hostPath:
-              path: /mnt/disks/minecraft-data
-              type: Directory
-        restartPolicy: Always
-    EOT
-  }
+docker rm -f minecraft || true
+
+docker run -d \
+  --name minecraft \
+  --restart unless-stopped \
+  -p 25565:25565 \
+  -p 25575:25575 \
+  -e EULA=TRUE \
+  -e MEMORY=2G \
+  -e ENABLE_RCON=true \
+  -e RCON_PORT=25575 \
+  -e RCON_PASSWORD=changeme \
+  -v "$MOUNT:/data" \
+  ${var.minecraft_image}
+EOF
 }
 
 ###########################

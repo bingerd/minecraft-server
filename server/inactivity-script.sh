@@ -1,20 +1,20 @@
 #!/bin/bash
+set -euo pipefail
 
 # --- Config ---
-MC_CONTAINER="${MC_CONTAINER:-minecraft}"   # container name
-IDLE_LIMIT="${IDLE_LIMIT:-300}"             # seconds before shutdown
-INTERVAL="${INTERVAL:-30}"                  # seconds between checks
+MC_CONTAINER="${MC_CONTAINER:-minecraft}"    # container name
+INTERVAL="${INTERVAL:-60}"                    # seconds between checks
+VM_NAME="${VM_NAME:?VM_NAME is required}"     # required
+ZONE="${ZONE:?ZONE is required}"             # required
+PROJECT="${PROJECT_ID:?PROJECT_ID is required}" # required
 
-VM_NAME="${VM_NAME}"                         # required
-ZONE="${ZONE}"                               # required
-PROJECT="${PROJECT_ID}"                       # required
-
+# Initialize last active timestamp
 last_active=$(date +%s)
 echo "$(date): Last active initialized to $last_active"
 
 # --- Function to get online players ---
 get_online_players() {
-    output=$(docker exec "$MC_CONTAINER" rcon-cli list 2>/dev/null)
+    output=$(sudo docker exec "$MC_CONTAINER" rcon-cli list 2>/dev/null || echo "")
     if [[ $output =~ There\ are\ ([0-9]+)\ of ]]; then
         echo "${BASH_REMATCH[1]}"
     else
@@ -25,7 +25,7 @@ get_online_players() {
 # --- Stop Minecraft server gracefully ---
 stop_minecraft_gracefully() {
     echo "$(date): Stopping Minecraft server gracefully..."
-    docker exec "$MC_CONTAINER" rcon-cli stop
+    sudo docker exec "$MC_CONTAINER" rcon-cli stop || true
     echo "$(date): Minecraft server stopped"
 }
 
@@ -47,7 +47,10 @@ while true; do
     fi
 
     idle_time=$(( now - last_active ))
-    echo "$(date): Idle time: $idle_time seconds"
+
+    # --- Dynamically read idle limit from env each loop ---
+    IDLE_LIMIT="${IDLE_LIMIT:-300}"   # fallback to 300 if not set
+    echo "$(date): Idle time: $idle_time seconds (Idle limit: $IDLE_LIMIT seconds)"
 
     if [[ "$idle_time" -ge "$IDLE_LIMIT" ]]; then
         echo "$(date): Server idle for $idle_time seconds, shutting down..."

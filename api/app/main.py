@@ -4,7 +4,9 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from googleapiclient import discovery
 from google.auth import default
-from google.cloud import dns_v1
+import paramiko  # for SSH RCON
+import time
+import requests
 
 app = FastAPI()
 
@@ -15,16 +17,22 @@ PROJECT_ID = os.getenv("PROJECT_ID", "minecraft-481513")
 ZONE = os.getenv("ZONE", "europe-west1-b")
 VM_NAME = os.getenv("VM_NAME", "minecraft-server")
 API_TOKEN = os.getenv("API_TOKEN", "changeme")
-DNS_ZONE = os.getenv("DNS_ZONE", "bngrd-com")
-SUBDOMAIN = "mc.bngrd.com."
+SSH_USER = os.getenv("SSH_USER", "your-ssh-user")
+SSH_KEY_PATH = os.getenv("SSH_KEY_PATH", "~/.ssh/id_rsa")  # path to your private key
+
+# Cloudflare config
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "Pw3CRMswloniTqzmXvZrqHxIm-vAr9JYV5YWxspc")
+CLOUDFLARE_ZONE_ID = os.getenv("CLOUDFLARE_ZONE_ID", "0479794b26e6322d9ebf93efb5584d1c")  # get from dashboard
+SUBDOMAIN = "mc.bngrd.com"
+
+# curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
+# -H "Authorization: Bearer Pw3CRMswloniTqzmXvZrqHxIm-vAr9JYV5YWxspc"
 
 # -------------------------------
 # Initialize clients
 # -------------------------------
 credentials, _ = default()
 compute = discovery.build("compute", "v1", credentials=credentials)
-dns_client = dns_v1.ManagedZonesClient()  # For listing zones
-dns_changes_client = dns_v1.ChangesClient()  # For DNS record changes
 
 # -------------------------------
 # HTTP Bearer security
@@ -53,35 +61,43 @@ def get_external_ip(instance):
             return access_configs[0].get("natIP")
     return None
 
-def update_dns_record(ip_address: str):
-    from google.cloud import dns_v1
-    from google.protobuf import field_mask_pb2
+def update_cloudflare_dns(ip_address: str):
+    """Update Cloudflare A record via API."""
+    headers = {
+        "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
-    # DNS zone path
-    zone_path = f"projects/{PROJECT_ID}/managedZones/{DNS_ZONE}"
+    # Get existing DNS records
+    url = f"https://api.cloudflare.com/client/v4/zones/{CLOUDFLARE_ZONE_ID}/dns_records"
+    resp = requests.get(url, headers=headers).json()
+    record = next((r for r in resp["result"] if r["name"] == SUBDOMAIN), None)
 
-    # Get current records
-    records_client = dns_v1.RecordsClient()
-    existing_records = records_client.list_records(parent=zone_path)
+    data = {
+        "type": "A",
+        "name": SUBDOMAIN,
+        "content": ip_address,
+        "ttl": 60,
+        "proxied": False  # Important for Minecraft
+    }
 
-    # Remove old A record if exists
-    old_record = next((r for r in existing_records if r.name == SUBDOMAIN and r.type_ == "A"), None)
-    
-    changes = dns_v1.Change()
-    if old_record:
-        changes.deletions.append(old_record)
+    if record:
+        requests.put(f"{url}/{record['id']}", headers=headers, json=data)
+    else:
+        requests.post(url, headers=headers, json=data)
 
-    # Add new A record
-    new_record = dns_v1.ResourceRecordSet(
-        name=SUBDOMAIN,
-        type_="A",
-        ttl=300,
-        rrdatas=[ip_address]
-    )
-    changes.additions.append(new_record)
-
-    # Apply change
-    dns_changes_client.create_change(parent=zone_path, change=changes)
+def run_ssh_command(host, command):
+    """Run SSH command using Paramiko."""
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(hostname=host, username=SSH_USER, key_filename=os.path.expanduser(SSH_KEY_PATH))
+    stdin, stdout, stderr = ssh.exec_command(command)
+    out = stdout.read().decode().strip()
+    err = stderr.read().decode().strip()
+    ssh.close()
+    if err:
+        raise Exception(err)
+    return out
 
 # -------------------------------
 # Start server
@@ -92,14 +108,21 @@ async def start_server():
         # Start the VM
         compute.instances().start(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
 
-        # Get instance info
-        instance = compute.instances().get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
+        # Wait until VM is RUNNING
+        for _ in range(30):
+            instance = compute.instances().get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
+            if instance.get("status") == "RUNNING":
+                break
+            time.sleep(2)
+        else:
+            return JSONResponse({"status": "error", "message": "VM did not start in time"}, status_code=500)
+
         external_ip = get_external_ip(instance)
         if not external_ip:
             return JSONResponse({"status": "error", "message": "No external IP found"}, status_code=500)
 
-        # Update DNS record
-        update_dns_record(external_ip)
+        # Update Cloudflare DNS record
+        update_cloudflare_dns(external_ip)
 
         return JSONResponse({"status": "starting", "external_ip": external_ip}, status_code=200)
 
@@ -133,7 +156,7 @@ async def status():
 # External IP
 # -------------------------------
 @app.get("/ip")
-async def get_external_ip():
+async def get_ip():
     try:
         instance = compute.instances().get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
         ip = get_external_ip(instance)
@@ -148,23 +171,13 @@ async def get_external_ip():
 async def rcon(command: str = Query(..., description="RCON command to run"),
                dep: None = Depends(check_token)):
     try:
-        ssh_command = [
-            "gcloud",
-            "compute",
-            "ssh",
-            VM_NAME,
-            f"--zone={ZONE}",
-            "--command",
-            f"sudo docker exec minecraft rcon-cli {command}"
-        ]
-        # Optional: replace with paramiko or google-cloud-ssh if you want pure Python SSH
-        import subprocess
-        result = subprocess.run(ssh_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        instance = compute.instances().get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
+        host_ip = get_external_ip(instance)
+        if not host_ip:
+            return JSONResponse({"status": "error", "message": "No external IP found"}, status_code=500)
 
-        if result.returncode != 0:
-            return JSONResponse({"status": "error", "message": result.stderr.strip()}, status_code=500)
-
-        return JSONResponse({"status": "success", "output": result.stdout.strip()})
+        output = run_ssh_command(host_ip, f"sudo docker exec minecraft rcon-cli {command}")
+        return JSONResponse({"status": "success", "output": output})
 
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)

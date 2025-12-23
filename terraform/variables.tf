@@ -36,3 +36,13 @@ variable "api_image" {
   description = "Full Artifact Registry image URL for the Cloud Run API"
   type        = string
 }
+
+variable "cloudflare_api_token" {
+  description = "Cloudflare DNS API token"
+  type        = string
+}
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare Zone ID"
+  type        = string
+}

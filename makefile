@@ -17,7 +17,7 @@ SIDECAR_DIR := server/vm
 API_DIR     := api
 
 SERVER_IMAGE  := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/minecraft-server/minecraft-server:latest
-SIDECAR_IMAGE := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/minecraft-server/inactivity-sidecar:latest
+# SIDECAR_IMAGE := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/minecraft-server/inactivity-sidecar:latest
 API_IMAGE     := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/$(CLOUD_RUN_SERVICE)/$(CLOUD_RUN_SERVICE):latest
 
 # ======================

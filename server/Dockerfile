@@ -18,7 +18,6 @@ RUN apt-get update && apt-get install -y \
     libffi-dev \
     libssl-dev
 
-
 # Add Google Cloud SDK repo key
 RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] http://packages.cloud.google.com/apt cloud-sdk main" \
@@ -28,14 +27,14 @@ RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dea
 # Create Python virtual environment
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install mcstatus dotenv google-cloud-compute
+    /opt/venv/bin/pip install mcstatus google-cloud-compute
 
 
 WORKDIR /opt/minecraft
 
 # Copy scripts
-COPY entrypoint.sh /opt/minecraft/entrypoint.sh
 COPY inactivity-script.sh /opt/minecraft/inactivity-script.sh
+COPY entrypoint.sh /opt/minecraft/entrypoint.sh
 RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-script.sh
 
 # Add Cloud SDK to PATH

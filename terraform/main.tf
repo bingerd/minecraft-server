@@ -74,7 +74,7 @@ resource "google_compute_disk" "minecraft_data" {
   size = 20
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 

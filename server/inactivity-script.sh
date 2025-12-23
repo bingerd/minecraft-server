@@ -49,7 +49,7 @@ while true; do
     idle_time=$(( now - last_active ))
 
     # --- Dynamically read idle limit from env each loop ---
-    IDLE_LIMIT="${IDLE_LIMIT:-300}"   # fallback to 300 if not set
+    IDLE_LIMIT="${IDLE_LIMIT:-3600}"   # fallback to 300 if not set
     echo "$(date): Idle time: $idle_time seconds (Idle limit: $IDLE_LIMIT seconds)"
 
     if [[ "$idle_time" -ge "$IDLE_LIMIT" ]]; then

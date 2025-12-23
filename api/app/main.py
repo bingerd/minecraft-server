@@ -38,17 +38,72 @@ async def root():
 # -------------------------------
 # Start server (no auth)
 # -------------------------------
+# -------------------------------
+# Start server (no auth)
+# -------------------------------
 @app.get("/start")
 async def start_server():
     try:
+        # 1. Start the VM
         compute.instances().start(
             project=PROJECT_ID,
             zone=ZONE,
             instance=VM_NAME
         ).execute()
-        return JSONResponse({"status": "starting"}, status_code=200)
+
+        # 2. Get the external IP
+        resp = compute.instances().get(
+            project=PROJECT_ID,
+            zone=ZONE,
+            instance=VM_NAME
+        ).execute()
+        network_interfaces = resp.get("networkInterfaces", [])
+        if network_interfaces:
+            access_configs = network_interfaces[0].get("accessConfigs", [])
+            external_ip = access_configs[0].get("natIP") if access_configs else None
+        else:
+            external_ip = None
+
+        if not external_ip:
+            return JSONResponse({"status": "error", "message": "No external IP found"}, status_code=500)
+
+        # 3. Update Cloud DNS
+        dns_zone = os.getenv("DNS_ZONE", "bngrd-com")  # replace with your managed zone name
+        subdomain = "mc.bngrd.com."
+
+        # Start transaction
+        subprocess.run(["gcloud", "dns", "record-sets", "transaction", "start", "--zone", dns_zone], check=True)
+
+        # Remove old A record (ignore errors if not exists)
+        subprocess.run([
+            "gcloud", "dns", "record-sets", "transaction", "remove",
+            "--zone", dns_zone,
+            "--name", subdomain,
+            "--type", "A",
+            "--ttl", "300",
+            external_ip  # required even if old IP is different, gcloud ignores if it doesn't match
+        ], check=False)
+
+        # Add new A record
+        subprocess.run([
+            "gcloud", "dns", "record-sets", "transaction", "add",
+            external_ip,
+            "--zone", dns_zone,
+            "--name", subdomain,
+            "--type", "A",
+            "--ttl", "300"
+        ], check=True)
+
+        # Execute transaction
+        subprocess.run(["gcloud", "dns", "record-sets", "transaction", "execute", "--zone", dns_zone], check=True)
+
+        return JSONResponse({"status": "starting", "external_ip": external_ip}, status_code=200)
+
+    except subprocess.CalledProcessError as e:
+        return JSONResponse({"status": "error", "message": f"DNS update failed: {e}"}, status_code=500)
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 
 # -------------------------------
 # Stop server (auth required)

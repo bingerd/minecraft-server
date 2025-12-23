@@ -14,7 +14,7 @@ echo "$(date): Last active initialized to $last_active"
 
 # --- Function to get online players ---
 get_online_players() {
-    output=$(sudo docker exec "$MC_CONTAINER" rcon-cli list 2>/dev/null || echo "")
+    output=$(rcon-cli list 2>/dev/null || echo "")
     if [[ $output =~ There\ are\ ([0-9]+)\ of ]]; then
         echo "${BASH_REMATCH[1]}"
     else
@@ -25,7 +25,7 @@ get_online_players() {
 # --- Stop Minecraft server gracefully ---
 stop_minecraft_gracefully() {
     echo "$(date): Stopping Minecraft server gracefully..."
-    sudo docker exec "$MC_CONTAINER" rcon-cli stop || true
+    rcon-cli stop || true
     echo "$(date): Minecraft server stopped"
 }
 

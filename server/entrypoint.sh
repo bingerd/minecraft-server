@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail
+set -e
 
-# Start Minecraft server in the background
+# Start Minecraft server in background
 /start &
 
 MC_PID=$!
@@ -14,12 +14,11 @@ done
 
 echo "Minecraft server is ready. Starting inactivity watcher..."
 
-# Start the bash inactivity script in the background
+# Start the Python idle-watcher in background
 /opt/minecraft/inactivity-script.sh &
 
-# Note: we do NOT kill the inactivity script because it will pause the VM when idle
-# The container will exit only when the Minecraft server process exits naturally
+PY_PID=$!
 
-# Wait for Minecraft server to exit
+# Wait for Minecraft process to exit
 wait $MC_PID
-echo "Minecraft server exited. Container will stop now."
+echo "Minecraft server exited. Stopping container."

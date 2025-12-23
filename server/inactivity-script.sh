@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # --- Config ---
-MC_CONTAINER="${MC_CONTAINER:-minecraft}"    # container name
-INTERVAL="${INTERVAL:-60}"                    # seconds between checks
+MC_CONTAINER="minecraft"    # container name
+INTERVAL="${INTERVAL:-30}"                    # seconds between checks
 VM_NAME="${VM_NAME:?VM_NAME is required}"     # required
 ZONE="${ZONE:?ZONE is required}"             # required
 PROJECT="${PROJECT_ID:?PROJECT_ID is required}" # required

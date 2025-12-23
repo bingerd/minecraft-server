@@ -155,6 +155,9 @@ docker run -d \
   -e ENABLE_RCON=true \
   -e RCON_PORT=25575 \
   -e RCON_PASSWORD=changeme \
+  -e VM_NAME=minecraft-server \
+  -e ZONE=europe-west1-b \
+  -e PROJECT_ID=minecraft-481513 \
   -v "$MOUNT:/data" \
   ${var.minecraft_image}
 EOF

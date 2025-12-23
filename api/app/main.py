@@ -25,8 +25,7 @@ CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_ZONE_ID = os.getenv("CLOUDFLARE_ZONE_ID")  # get from dashboard
 SUBDOMAIN = "mc.bngrd.com"
 
-# curl "https://api.cloudflare.com/client/v4/user/tokens/verify" \
-# -H "Authorization: Bearer Pw3CRMswloniTqzmXvZrqHxIm-vAr9JYV5YWxspc"
+DNS_ZONE = os.getenv("DNS_ZONE", "bngrd-com")
 
 # -------------------------------
 # Initialize clients

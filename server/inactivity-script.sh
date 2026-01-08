@@ -25,7 +25,7 @@ get_online_players() {
 # --- Stop Minecraft server gracefully ---
 stop_minecraft_gracefully() {
     echo "$(date): Stopping Minecraft server gracefully..."
-    rcon-cli stop || true
+    rcon-cli save-all || true
     echo "$(date): Minecraft server stopped"
 }
 
@@ -55,6 +55,7 @@ while true; do
     if [[ "$idle_time" -ge "$IDLE_LIMIT" ]]; then
         echo "$(date): Server idle for $idle_time seconds, shutting down..."
         stop_minecraft_gracefully
+        sleep "$INTERVAL"
         stop_vm
         break
     fi

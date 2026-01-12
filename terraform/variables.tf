@@ -46,3 +46,8 @@ variable "cloudflare_zone_id" {
   description = "Cloudflare Zone ID"
   type        = string
 }
+
+variable "rcon_api_key" {
+  description = "RCON API key"
+  type        = string
+}

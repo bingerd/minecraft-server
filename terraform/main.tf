@@ -150,6 +150,7 @@ docker run -d \
   --restart unless-stopped \
   -p 25565:25565 \
   -p 25575:25575 \
+  -p 8000:8000 \
   -e EULA=TRUE \
   -e MEMORY=2G \
   -e ENABLE_RCON=true \

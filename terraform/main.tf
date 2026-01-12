@@ -158,7 +158,7 @@ docker run -d \
   -e VM_NAME=${var.vm_name} \
   -e ZONE=${var.zone} \
   -e PROJECT_ID=${var.project_id} \
-  -e RCON_API_KEY=${var.rcon_api_key}
+  -e RCON_API_KEY=${var.rcon_api_key} \
   -v "$MOUNT:/data" \
   ${var.minecraft_image}
 EOF

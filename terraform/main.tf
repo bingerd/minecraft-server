@@ -16,6 +16,11 @@ resource "google_compute_firewall" "minecraft" {
     ports    = ["25565"]
   }
 
+  allow {
+    protocol = "tcp"
+    ports = ["25575", "8000"]
+  }
+
   source_ranges = ["0.0.0.0/0"]
   target_tags   = ["minecraft-server"]
 }

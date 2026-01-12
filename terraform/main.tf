@@ -223,6 +223,11 @@ resource "google_cloud_run_service" "api" {
           value = var.rcon_api_key
         }
 
+        env {
+          name = "API_TOKEN"
+          value = var.rcon_api_key
+        }
+
         resources {
           limits = {
             cpu    = "1"

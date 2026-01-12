@@ -12,12 +12,10 @@ app = FastAPI()
 # -------------------------------
 # Load environment variables
 # -------------------------------
-PROJECT_ID = os.getenv("PROJECT_ID", "minecraft-481513")
-ZONE = os.getenv("ZONE", "europe-west1-b")
-VM_NAME = os.getenv("VM_NAME", "minecraft-server")
-API_TOKEN = os.getenv("API_TOKEN", "changeme")
-SSH_USER = os.getenv("SSH_USER", "your-ssh-user")
-SSH_KEY_PATH = os.getenv("SSH_KEY_PATH", "~/.ssh/id_rsa")  # path to your private key
+PROJECT_ID = os.getenv("PROJECT_ID")
+ZONE = os.getenv("ZONE")
+VM_NAME = os.getenv("VM_NAME")
+API_TOKEN = os.getenv("API_TOKEN")
 
 # Cloudflare config
 CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")

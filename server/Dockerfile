@@ -1,8 +1,6 @@
 FROM itzg/minecraft-server:latest
 
-ENV EULA=TRUE
-ENV MEMORY=1G
-
+ENV EULA=true
 USER root
 
 # Install dependencies
@@ -27,7 +25,7 @@ RUN curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --dea
 # Create Python virtual environment
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --upgrade pip && \
-    /opt/venv/bin/pip install mcstatus google-cloud-compute
+    /opt/venv/bin/pip install mcstatus google-cloud-compute fastapi uvicorn
 
 
 WORKDIR /opt/minecraft
@@ -35,12 +33,14 @@ WORKDIR /opt/minecraft
 # Copy scripts
 COPY inactivity-script.sh /opt/minecraft/inactivity-script.sh
 COPY entrypoint.sh /opt/minecraft/entrypoint.sh
+COPY rcon_api.py /opt/minecraft/rcon_api.py
+# RUN dos2unix /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-script.sh
 RUN chmod +x /opt/minecraft/entrypoint.sh /opt/minecraft/inactivity-script.sh
 
 # Add Cloud SDK to PATH
 ENV PATH=$PATH:/usr/bin/google-cloud-sdk/bin
 
 # Expose Minecraft & RCON
-EXPOSE 25565 25575
+EXPOSE 8000 25565 25575
 
 ENTRYPOINT ["/opt/minecraft/entrypoint.sh"]

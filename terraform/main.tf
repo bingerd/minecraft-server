@@ -154,10 +154,11 @@ docker run -d \
   -e MEMORY=2G \
   -e ENABLE_RCON=true \
   -e RCON_PORT=25575 \
-  -e RCON_PASSWORD=changeme \
-  -e VM_NAME=minecraft-server \
-  -e ZONE=europe-west1-b \
-  -e PROJECT_ID=minecraft-481513 \
+  -e RCON_PASSWORD=${var.rcon_api_key} \
+  -e VM_NAME=${var.vm_name} \
+  -e ZONE=${var.zone} \
+  -e PROJECT_ID=${var.project_id} \
+  -e RCON_API_KEY=${var.rcon_api_key}
   -v "$MOUNT:/data" \
   ${var.minecraft_image}
 EOF
@@ -209,6 +210,11 @@ resource "google_cloud_run_service" "api" {
         env {
           name  = "CLOUDFLARE_ZONE_ID"
           value = var.cloudflare_zone_id
+        }
+
+        env {
+          name = "RCON_API_KEY"
+          value = var.rcon_api_key
         }
 
         resources {

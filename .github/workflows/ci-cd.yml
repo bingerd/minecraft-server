@@ -113,6 +113,7 @@ jobs:
           TF_VAR_api_image: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/minecraft-api/minecraft-api:latest
           TF_VAR_cloudflare_zone_id: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           TF_VAR_cloudflare_api_token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TF_VAR_rcon_api_key: ${{ secrets.RCON_API_KEY}}
         run: |
           if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             echo "Destroying all Terraform-managed resources..."

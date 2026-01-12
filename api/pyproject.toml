@@ -11,8 +11,7 @@ dependencies = [
   "google-auth>=2.22.0",
   "google-cloud-dns>=0.36.0",   # <-- for managing Cloud DNS via Python
   "mcrcon>=0.7.0",
-  "python-dotenv>=1.2.1",
-  "paramiko>=3.3.0"            # <-- optional: for SSH-based RCON instead of gcloud CLI
+  "python-dotenv>=1.2.1",         # <-- optional: for SSH-based RCON instead of gcloud CLI
 ]
 
 

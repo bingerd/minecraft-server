@@ -14,6 +14,11 @@ done
 
 echo "Minecraft server is ready. Starting inactivity watcher..."
 
+# Start rcon-cli api
+/opt/venv/bin/uvicorn rcon_api:app \
+    --host 0.0.0.0 \
+    --port 8000 &
+
 # Start the Python idle-watcher in background
 /opt/minecraft/inactivity-script.sh &
 

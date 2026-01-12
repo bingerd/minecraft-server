@@ -4,7 +4,6 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from googleapiclient import discovery
 from google.auth import default
-import paramiko  # for SSH RCON
 import time
 import requests
 
@@ -85,18 +84,6 @@ def update_cloudflare_dns(ip_address: str):
     else:
         requests.post(url, headers=headers, json=data)
 
-def run_ssh_command(host, command):
-    """Run SSH command using Paramiko."""
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname=host, username=SSH_USER, key_filename=os.path.expanduser(SSH_KEY_PATH))
-    stdin, stdout, stderr = ssh.exec_command(command)
-    out = stdout.read().decode().strip()
-    err = stderr.read().decode().strip()
-    ssh.close()
-    if err:
-        raise Exception(err)
-    return out
 
 # -------------------------------
 # Start server
@@ -167,19 +154,56 @@ async def get_ip():
 # RCON endpoint
 # -------------------------------
 @app.get("/rcon")
-async def rcon(command: str = Query(..., description="RCON command to run"),
-               dep: None = Depends(check_token)):
+async def rcon(
+    command: str = Query(..., description="RCON command to run"),
+    dep: None = Depends(check_token)
+):
     try:
-        instance = compute.instances().get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME).execute()
+        # Get VM info
+        instance = compute.instances().get(
+            project=PROJECT_ID,
+            zone=ZONE,
+            instance=VM_NAME
+        ).execute()
+
         host_ip = get_external_ip(instance)
         if not host_ip:
-            return JSONResponse({"status": "error", "message": "No external IP found"}, status_code=500)
+            return JSONResponse(
+                {"status": "error", "message": "No external IP found"},
+                status_code=500
+            )
 
-        output = run_ssh_command(host_ip, f"sudo docker exec minecraft rcon-cli {command}")
-        return JSONResponse({"status": "success", "output": output})
+        # Call private RCON API inside container
+        rcon_url = f"http://{host_ip}:8000/rcon"
+
+        resp = requests.post(
+            rcon_url,
+            headers={
+                "X-API-Key": os.environ["RCON_API_KEY"]
+            },
+            params={
+                "command": command
+            },
+            timeout=5
+        )
+
+        if resp.status_code != 200:
+            return JSONResponse(
+                {"status": "error", "message": resp.text},
+                status_code=resp.status_code
+            )
+
+        return JSONResponse(
+            {"status": "success", "result": resp.json()},
+            status_code=200
+        )
 
     except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500
+        )
+
 
 # -------------------------------
 # Entrypoint

@@ -182,6 +182,41 @@ async def get_ip():
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+@app.get("/players/count")
+async def player_count():
+    try:
+        instance = (
+            compute.instances()
+            .get(project=PROJECT_ID, zone=ZONE, instance=VM_NAME)
+            .execute()
+        )
+
+        host_ip = get_external_ip(instance)
+        if not host_ip:
+            return JSONResponse(
+                {"status": "error", "message": "No external IP found"}, status_code=500
+            )
+
+        rcon_url = f"http://{host_ip}:8000/rcon"
+
+        resp = requests.post(
+            rcon_url,
+            headers={"X-API-Key": os.environ["RCON_API_KEY"]},
+            params={"command": "list"},
+            timeout=5,
+        )
+
+        if resp.status_code != 200:
+            return JSONResponse(
+                {"status": "error", "message": resp.text}, status_code=resp.status_code
+            )
+
+        return JSONResponse(
+            {"status": "success", "result": resp.json()}, status_code=200
+        )
+
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
 # -------------------------------
 # RCON endpoint

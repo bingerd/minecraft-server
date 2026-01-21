@@ -30,8 +30,10 @@
 
     <!-- Players -->
     <section class="card players">
-      <h2>👥 Players Online</h2>
-      <div id="players">—</div>
+      <h2>
+        Players Online
+        <span id="playerCount" class="player-count"></span>
+      </h2>
     </section>
 
     <footer>
@@ -86,6 +88,41 @@ async function startServer() {
     }
   }, 3000);
 }
+
+const MAX_PLAYERS = 20;
+
+async function loadPlayerCount() {
+  const countEl = document.getElementById("playerCount");
+  const bar = document.getElementById("player-bar-fill");
+
+  try {
+    const res = await fetch("/players/count").then(r => r.json());
+    const data = await res.json();
+
+    let count = 0;
+
+    if (typeof data === "number") {
+      count = data;
+    } else if (data.players) {
+      const match = data.players.match(/There are (\d+) of a max (\d+)/);
+      if (match) {
+        count = Number(match[1]);
+      }
+    }
+
+    countEl.innerText = 5
+    bar.style.width = `${Math.min(100, (count / MAX_PLAYERS) * 100)}%`;
+
+  } catch (err) {
+    countEl.innerText = "N/A";
+    bar.style.width = "0%";
+  }
+}
+
+
+// Initial load + auto-refresh
+loadPlayerCount();
+setInterval(loadPlayerCount, 5000);
 
 loadStatus();
 </script>

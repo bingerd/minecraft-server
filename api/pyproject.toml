@@ -9,9 +9,10 @@ dependencies = [
   "uvicorn>=0.38.0",
   "google-api-python-client>=2.95.0",
   "google-auth>=2.22.0",
-  "google-cloud-dns>=0.36.0",   # <-- for managing Cloud DNS via Python
+  "google-cloud-dns>=0.36.0", # <-- for managing Cloud DNS via Python
   "mcrcon>=0.7.0",
-  "python-dotenv>=1.2.1",         # <-- optional: for SSH-based RCON instead of gcloud CLI
+  "python-dotenv>=1.2.1", # <-- optional: for SSH-based RCON instead of gcloud CLI
+  "jinja2>=3.1.6",
 ]
 
 

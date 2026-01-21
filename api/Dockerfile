@@ -5,6 +5,7 @@ WORKDIR /app
 # Copy metadata AND source before install
 COPY pyproject.toml .
 COPY app ./app
+COPY . .
 
 # Install the project
 RUN pip install --no-cache-dir .

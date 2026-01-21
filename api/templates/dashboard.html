@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Minecraft Server Control</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="background-image"></div>
+  <div class="bg-glow"></div>
+  <div class="pixel-overlay"></div>
+
+  <div class="container">
+    <header>
+      <h1>NetherAPI</h1>
+      <p class="subtitle">{{ subdomain }}</p>
+    </header>
+
+    <!-- Status Core -->
+    <section class="core-card">
+      <div id="core" class="core offline"></div>
+      <div id="statusText">Checking status...</div>
+      <div id="ip"></div>
+    </section>
+
+    <!-- Actions -->
+    <section class="card actions">
+      <button class="start" onclick="startServer()">▶ Start Server</button>
+    </section>
+
+    <!-- Players -->
+    <section class="card players">
+      <h2>👥 Players Online</h2>
+      <div id="players">—</div>
+    </section>
+
+    <footer>
+      <a href="/docs">API Docs</a>
+    </footer>
+  </div>
+
+<script>
+let starting = false;
+
+async function loadStatus() {
+  const status = await fetch("/status").then(r => r.json());
+  const ip = await fetch("/ip").then(r => r.json());
+
+  const core = document.getElementById("core");
+  const text = document.getElementById("statusText");
+
+  core.classList.remove("online", "offline", "starting");
+
+  if (starting && !status.running) {
+    core.classList.add("starting");
+    text.innerText = "🟡 Starting server…";
+  } else if (status.running) {
+    core.classList.add("online");
+    text.innerText = "🟢 Server Online";
+    starting = false;
+  } else {
+    core.classList.add("offline");
+    text.innerText = "🔴 Server Offline";
+    starting = false;
+  }
+
+  document.getElementById("ip").innerText =
+    ip.external_ip ? `IP: ${ip.external_ip}` : "";
+}
+
+async function startServer() {
+  starting = true;
+  loadStatus();
+
+  await fetch("/start");
+
+  // Poll until server is running
+  const poll = setInterval(async () => {
+    const status = await fetch("/status").then(r => r.json());
+    if (status.running) {
+      clearInterval(poll);
+      starting = false;
+      loadStatus();
+    } else {
+      loadStatus();
+    }
+  }, 3000);
+}
+
+loadStatus();
+</script>
+</body>
+</html>

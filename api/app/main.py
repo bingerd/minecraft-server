@@ -1,13 +1,19 @@
 import os
-from fastapi import FastAPI, Query, HTTPException, Depends
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from googleapiclient import discovery
-from google.auth import default
 import time
+
 import requests
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from google.auth import default
+from googleapiclient import discovery
 
 app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # -------------------------------
 # Load environment variables
@@ -48,9 +54,17 @@ def check_token(credentials: HTTPAuthorizationCredentials = Depends(bearer_schem
 # -------------------------------
 # Redirect root to docs
 # -------------------------------
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/docs")
+# @app.get("/")
+# async def root():
+#     return RedirectResponse(url="/docs")
+
+
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "subdomain": SUBDOMAIN},
+    )
 
 
 # -------------------------------
@@ -182,6 +196,7 @@ async def get_ip():
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
 
+
 @app.get("/players/count")
 async def player_count():
     try:
@@ -217,6 +232,7 @@ async def player_count():
 
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+
 
 # -------------------------------
 # RCON endpoint

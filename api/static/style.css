@@ -1,0 +1,190 @@
+:root {
+  --bg: #020617;
+  --card: rgba(2, 6, 23, 0.85);
+  --accent: #22c55e;
+  --danger: #ef4444;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #020617, #000);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+@font-face {
+  font-family: "Minecraft";
+  src: url("/static/fonts/Minecraftia-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+
+/* Animated background glow */
+.bg-glow {
+  position: fixed;
+  inset: -50%;
+  background: conic-gradient(
+    from 180deg,
+    #22c55e22,
+    #0ea5e922,
+    #22c55e22
+  );
+  animation: spin 30s linear infinite;
+  filter: blur(120px);
+  z-index: -1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.container {
+  max-width: 720px;
+  margin: auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+header h1 {
+  font-family: "Minecraft", system-ui, sans-serif;
+  font-size: 2.2rem;
+  letter-spacing: 0.08em;
+  /* text-transform: uppercase; */
+  text-shadow:
+    0 2px 0 #000,
+    0 4px 0 #000,
+    0 0 20px #22c55e88;
+}
+
+
+.subtitle {
+  color: var(--muted);
+}
+
+/* Core status */
+.core-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  box-shadow: 0 0 60px rgba(34,197,94,0.12);
+}
+
+.core {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin: 0 auto 1rem;
+  background: radial-gradient(circle, #555, #111);
+  box-shadow: inset 0 0 20px #000;
+  transition: all 0.4s ease;
+}
+
+.core.online {
+  background: radial-gradient(circle, #4ade80, #166534);
+  box-shadow:
+    0 0 30px #22c55e,
+    0 0 60px #22c55e88;
+  animation: pulse 2s infinite;
+}
+
+.core.offline {
+  background: radial-gradient(circle, #f87171, #7f1d1d);
+  box-shadow: 0 0 20px #ef4444aa;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 20px #22c55e; }
+  50% { box-shadow: 0 0 50px #22c55e; }
+  100% { box-shadow: 0 0 20px #22c55e; }
+}
+
+/* Cards */
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+button {
+  flex: 1;
+  padding: 0.9rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+button.start {
+  background: linear-gradient(135deg, #22c55e, #4ade80);
+  color: black;
+}
+
+button.stop {
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  color: white;
+}
+
+button.refresh {
+  background: #1e293b;
+  color: white;
+}
+
+/* Players */
+.players h2 {
+  margin-top: 0;
+}
+
+footer {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+footer a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.background-image {
+  position: fixed;
+  inset: 0;
+  background-image: url("/static/images/image3.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: brightness(0.45) saturate(1.1);
+  z-index: -3;
+}

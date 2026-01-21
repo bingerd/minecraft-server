@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 
 import requests
 from fastapi import Depends, FastAPI, HTTPException, Query, Request
@@ -12,7 +13,9 @@ from googleapiclient import discovery
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # -------------------------------

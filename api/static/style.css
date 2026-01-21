@@ -181,7 +181,7 @@ footer a {
 .background-image {
   position: fixed;
   inset: 0;
-  background-image: url("/static/images/image3.jpg");
+  background-image: url("/static/images/image3.JPG");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
